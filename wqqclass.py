@@ -26,23 +26,41 @@ def data_load(in_list, do_clean=False):
 def plot_stack_var(df_bkg,lab_list,var,GeV):
     stack_var=[]
     stack_var_w=[]
-    stack_var_leg=[]    
+    stack_var_leg=[]
+    stack_var_col=[]
     for i in lab_list:
         stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
         stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
         stack_var_leg.append(i)
+        stack_var_col.append(samples[i]['color'])
 
+    plt.figure(1) 
     plt.hist( stack_var, binning[var], histtype='step',
-         weights=stack_var_w,
-         label=stack_var_leg,
-         stacked=True, 
-         fill=True, 
-         linewidth=2, alpha=0.8)
+              weights=stack_var_w,
+              label=stack_var_leg,
+              color = stack_var_col,
+              stacked=True, 
+              fill=True,
+              linewidth=2, alpha=0.8)
     plt.xlabel(var,fontsize=12)
     plt.ylabel('# Events',fontsize=12) 
     plt.legend()
-    plt.savefig('Plots/'+var+'.png', transparent=True)
+    plt.savefig('Plots/stack/'+var+'.png', transparent=True)
 
+    plt.figure(2) 
+    plt.hist( stack_var, binning[var], histtype='step',
+              weights=stack_var_w,
+              label=stack_var_leg,
+              color = stack_var_col,
+              density=1,
+              stacked=False, 
+              fill=False, 
+              linewidth=2, alpha=0.8)
+    plt.xlabel(var,fontsize=12)
+    plt.ylabel('# Events',fontsize=12) 
+    plt.legend()
+    plt.savefig('Plots/norm/'+var+'.png', transparent=True)
+    
     
 def main():
     print("load data")
