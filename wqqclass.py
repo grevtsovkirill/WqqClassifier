@@ -24,6 +24,8 @@ sample_list = vars(args)["samples"]
 doclean = vars(args)["clean"]
 
 if process_type =='train' or process_type == 'apply' :
+    from sklearn.metrics import roc_auc_score, roc_curve, auc
+    from sklearn.metrics import classification_report
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
     from keras.layers import Layer, Input, Dense, Dropout
@@ -146,6 +148,27 @@ def plot_curve(epochs, hist, list_of_metrics,save=True):
     else:
         plt.show()
 
+def get_roc(y_test, y_predicted):
+    fpr, tpr, _ = roc_curve(y_test, y_predicted)
+    plt.figure()
+    lw = 2
+    plt.plot(tpr, 1-fpr, 
+             lw=lw, label='%s ROC (%0.3f)' % ("NN ", roc_auc_score(y_test, y_predicted))) #color='darkorange',
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    #plt.plot(fpr, tpr, 
+    #plt.xlabel('False Positive Rate')
+    #plt.ylabel('True Positive Rate')
+    #plt.title('Receiver operating characteristic example')
+    plt.xlabel("Signal efficiency")
+    plt.ylabel("Background rejection")
+    plt.title('Background rejection versus Signal efficiency')
+    plt.legend(loc="lower left")
+    plt.savefig("Plots/training/ROC_NN_ttw_ttbar.png", transparent=True)
+    
+
+
 def main():
     print("load data")
     dfs=data_load(sample_list)
@@ -181,7 +204,10 @@ def main():
 
             if model:
                 testPredict = model.predict(X_test)
-                print(testPredict)
-            
+                get_roc(y_test,testPredict)
+                print( classification_report(y_test, testPredict.round(), target_names=["signal", "background"]))
+                print( "Area under ROC curve: %.4f"%(roc_auc_score(y_test, testPredict)))
+
+
 if __name__ == "__main__":
     main() 
