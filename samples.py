@@ -5,7 +5,8 @@ BASE       = '../Files/processed/'
 samples = {    
     'ttW' : {
         'filename' : 'skimReco_413008_xs.csv',   
-        'color'    : 'red',   
+        'color'    : 'red',
+        'group'   : 'ttW'
     },
     'ttZmumu' : {
         'filename' : 'skimReco_410219_xs.csv',   
@@ -14,6 +15,7 @@ samples = {
     },    
     'ttbar' : {
         'filename' : 'skimReco_410470_xs.csv',   
-        'color'    : 'green',   
+        'color'    : 'green',
+        'group'   : 'ttbar'
     }
 }
