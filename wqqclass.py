@@ -5,6 +5,15 @@ import json
 
 from samples import *
 
+import argparse
+parser = argparse.ArgumentParser(description='Prepare classifier')
+parser.add_argument('-t','--type', required=True, type=str, choices=['plot', 'train','apply'], help='Choose processing type: explore variable [plot], train the model [train], or apply existing model [apply] ')
+parser.add_argument('-s','--samples', nargs='+', default=['ttW','ttbar'], help='Choose list of samples to run over ')
+
+args = parser.parse_args()
+
+process_type = vars(args)["type"]
+sample_list = vars(args)["samples"]
 
 scale_to_GeV=0.001
 binning = {"DRll01": np.linspace(-2, 6, 24),
@@ -16,11 +25,15 @@ def data_load(in_list, do_clean=False):
     if do_clean:
         var_list=sel_vars()
 
-    for s in samples:
-        print(s,'  ',samples[s]['filename'])
-        df[s] = pd.read_csv(BASE+samples[s]['filename'])
-        if do_clean:
-            df[s] = df[s][var_list]
+    for s in in_list:
+        if s in samples:
+            print(s,'  ',samples[s]['filename'])
+            df[s] = pd.read_csv(BASE+samples[s]['filename'])
+            if do_clean:
+                df[s] = df[s][var_list]
+        else:
+            print(s,' is not in available sample list')
+            break
     return df
 
 def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
@@ -65,10 +78,17 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
     
 def main():
     print("load data")
-    dfs=data_load(samples)
+    dfs=data_load(sample_list)
     #print(dfs['ttW'].columns)
-    plot_var(dfs,['ttW','ttZmumu','ttbar'],'Njets')
-    plot_var(dfs,['ttW','ttbar'],'Njets',False)
+    if process_type =='plot':
+        plot_var(dfs,['ttW','ttZmumu','ttbar'],'Njets')
+        plot_var(dfs,['ttW','ttbar'],'Njets',False)
+
+    elif process_type == 'train':
+        if dfs:
+            print("prepare for training")
+
+        
      
 if __name__ == "__main__":
     main() 
