@@ -23,7 +23,7 @@ process_type = vars(args)["type"]
 sample_list = vars(args)["samples"]
 doclean = vars(args)["clean"]
 
-if process_type =='train':
+if process_type =='train' or process_type == 'apply' :
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
     from keras.layers import Layer, Input, Dense, Dropout
@@ -154,26 +154,34 @@ def main():
         plot_var(dfs,['ttW','ttZmumu','ttbar'],'Njets')
         plot_var(dfs,['ttW','ttbar'],'Njets',False)
 
-    elif process_type == 'train':
+    else:
         if dfs:
             print("prepare for training, ")
             X_train, X_test, y_train, y_test = pred_ds(dfs)
-            
-            learning_rate = 0.003
-            epochs = 500
-            batch_size = 16000
-            validation_split = 0.2
 
-            mymodel = create_model(learning_rate)        
-            epochs, hist = train_model(mymodel, X_train, y_train, 
-                           epochs, batch_size, validation_split)
+            if process_type == 'train':
+                learning_rate = 0.003
+                epochs = 500
+                batch_size = 16000
+                validation_split = 0.2
 
-            print("\n Evaluate the new model against the test set:")
-            print(mymodel.evaluate(X_test, y_test, batch_size=batch_size))
+                model = create_model(learning_rate)        
+                epochs, hist = train_model(model, X_train, y_train, 
+                                           epochs, batch_size, validation_split)
+
             
-            list_of_metrics_to_plot = ['loss','val_loss']
-            plot_curve(epochs, hist, list_of_metrics_to_plot)
-            
+                print("\n Evaluate the new model against the test set:")
+                print(model.evaluate(X_test, y_test, batch_size=batch_size))
+                
+                list_of_metrics_to_plot = ['loss','val_loss']
+                plot_curve(epochs, hist, list_of_metrics_to_plot)
+                model.save('Models/nn_v0.h5')
+            elif process_type == 'apply':
+                model = load_model('Models/nn_v0.h5')
+
+            if model:
+                testPredict = model.predict(X_test)
+                print(testPredict)
             
 if __name__ == "__main__":
     main() 
