@@ -1,5 +1,5 @@
 ###
-BASE       = '../../Files/processed/'
+BASE       = '../Files/processed/'
 
 ####
 samples = {    
