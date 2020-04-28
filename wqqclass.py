@@ -5,22 +5,36 @@ import json
 
 from samples import *
 
+
+from sklearn.model_selection import train_test_split
+
+
 import argparse
 parser = argparse.ArgumentParser(description='Prepare classifier')
 parser.add_argument('-t','--type', required=True, type=str, choices=['plot', 'train','apply'], help='Choose processing type: explore variable [plot], train the model [train], or apply existing model [apply] ')
 parser.add_argument('-s','--samples', nargs='+', default=['ttW','ttbar'], help='Choose list of samples to run over ')
+parser.add_argument('-c','--clean', default=False, help='Use selected list of variables ')
 
 args = parser.parse_args()
 
 process_type = vars(args)["type"]
 sample_list = vars(args)["samples"]
+doclean = vars(args)["clean"]
 
 scale_to_GeV=0.001
 binning = {"DRll01": np.linspace(-2, 6, 24),
            "max_eta": np.linspace(0, 2.5, 26),
            "Njets": np.linspace(0, 10, 10),
           }
-def data_load(in_list, do_clean=False):
+
+def sel_vars(list_name="varlist.json"):
+    with open(list_name) as vardict:
+        variablelist = json.load(vardict)[:]
+
+    print(variablelist)
+    return variablelist
+
+def data_load(in_list, do_clean=doclean):
     df = {}
     if do_clean:
         var_list=sel_vars()
@@ -75,7 +89,14 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
         plt.legend()
         plt.savefig('Plots/norm/'+var+'.png', transparent=True)
     
-    
+
+def pred_ds(dfs,test_samp_size=0.33):    
+    X = np.concatenate((dfs['ttW'],dfs['ttbar']))
+    y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables                                                                       
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_samp_size)
+    return X_train, X_test, y_train, y_test
+
+
 def main():
     print("load data")
     dfs=data_load(sample_list)
@@ -86,8 +107,9 @@ def main():
 
     elif process_type == 'train':
         if dfs:
-            print("prepare for training")
-
+            print("prepare for training, ")
+            X_train, X_test, y_train, y_test = pred_ds(dfs)
+            
         
      
 if __name__ == "__main__":
