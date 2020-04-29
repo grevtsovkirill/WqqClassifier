@@ -148,7 +148,6 @@ def create_model(my_learning_rate):
     dense_dim=len(sel_vars())
     model = Sequential()
     model.add(Dense(dense_dim, input_dim=dense_dim, activation='relu'))
-    model.add(Dense(70, activation='relu'))
     model.add(Dense(30, activation='relu'))
     model.add(Dense(20, activation='relu'))
     model.add(Dense(10, activation='relu'))
@@ -181,18 +180,15 @@ def train_model(model, train_features, train_label, weights,
 
 def plot_curve(epochs, hist, list_of_metrics,save=True):
     plt.figure("loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Value")
-    
+    label_val = list_of_metrics[0]
     for m in list_of_metrics:
         x = hist[m]
-        plt.plot(epochs[1:], x[1:], label=m)
-    
-    plt.ylabel('cross-entropy loss',fontsize=14)
+        plt.plot(epochs[1:], x[1:], label=m)    
+    plt.ylabel(label_val,fontsize=14)
     plt.xlabel('epochs',fontsize=14)
     plt.legend()
     if save:
-        plt.savefig("Outputs/training/loss_NNw.png", transparent=True)
+        plt.savefig("Outputs/training/"+label_val+"_NNw.png", transparent=True)
     else:
         plt.show()
     plt.close("loss")
@@ -239,7 +235,7 @@ def main():
 
             learning_rate = 0.001
             nepochs = 500
-            batch_size = 2000
+            batch_size = 32
             validation_split = 0.2
 
             if process_type == 'train':
@@ -251,9 +247,11 @@ def main():
             
                 print("\n Evaluate the new model against the test set:")
                 print(model.evaluate(X_test, y_test, batch_size=batch_size))
-                
                 list_of_metrics_to_plot = ['loss','val_loss']
                 plot_curve(epochs, hist, list_of_metrics_to_plot)
+                list_of_metrics_to_plot = ['acc','val_acc']
+                plot_curve(epochs, hist, list_of_metrics_to_plot)
+
                 model.save('Outputs/training/model_nn_v0.h5')
             elif process_type == 'read':
                 model = load_model('Outputs/training/model_nn_v0.h5')
