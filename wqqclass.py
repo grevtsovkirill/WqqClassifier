@@ -66,11 +66,15 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
     stack_var=[]
     stack_var_w=[]
     stack_var_leg=[]
+    stack_var_yields=[]
     stack_var_col=[]
     for i in lab_list:
         stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
         stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
-        stack_var_leg.append(samples[i]['group'])
+        stack_var_yields.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
+        yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
+        print(i," ", yield_val)
+        stack_var_leg.append(samples[i]['group']+" "+yield_val)
         stack_var_col.append(samples[i]['color'])
 
     if do_stack:
@@ -81,8 +85,12 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
                   color = stack_var_col,
                   stacked=True, 
                   fill=True,
-                  linewidth=2, alpha=0.8)
+                  log=True,
+                  linewidth=2,
+                  alpha=0.8
+        )
         plt.xlabel(var,fontsize=12)
+        plt.ylim(1e-1, 1e8)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
         plt.savefig('Outputs/stack/'+var+'.png', transparent=True)
@@ -106,7 +114,7 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
 
 def pred_ds(dfs,test_samp_size=0.33):    
     X = np.concatenate((dfs['ttW'],dfs['ttbar']))
-    sc = StandardScaler()
+    sc = StandardScaler(copy=False)
     X = sc.fit_transform(X)
     y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables                                                                       
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_samp_size)
@@ -136,10 +144,11 @@ def create_model(my_learning_rate):
     dense_dim=len(sel_vars())
     model = Sequential()
     model.add(Dense(dense_dim, input_dim=dense_dim, activation='relu'))
-    model.add(Dense(20, activation='relu'))
-    model.add(Dense(35, activation='relu'))
-    model.add(Dropout(rate=0.1, noise_shape=None, seed=None))
+    #model.add(Dense(20, activation='relu'))
+    model.add(Dense(40, activation='relu'))
+    model.add(Dropout(rate=0.005, noise_shape=None, seed=None))
     model.add(Dense(50, activation='relu'))
+    model.add(Dropout(rate=0.005, noise_shape=None, seed=None))
     model.add(Dense(1, activation='sigmoid',name='classifier_output'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
@@ -198,7 +207,7 @@ def main():
     dfs=data_load(sample_list)
     #print(dfs['ttW'].columns)
     if process_type =='plot':
-        plot_var(dfs,['ttW','ttZmumu','ttbar'],'Njets')
+        plot_var(dfs,sample_list,'Njets')
         plot_var(dfs,['ttW','ttbar'],'Njets',False)
 
     else:
@@ -206,8 +215,8 @@ def main():
             print("prepare for training, ")
             X_train, X_test, y_train, y_test = pred_ds(dfs)
 
-            learning_rate = 0.003
-            epochs = 500
+            learning_rate = 0.001
+            nepochs = 500
             batch_size = 16000
             validation_split = 0.2
 
@@ -215,7 +224,7 @@ def main():
 
                 model = create_model(learning_rate)        
                 epochs, hist = train_model(model, X_train, y_train, 
-                                           epochs, batch_size, validation_split)
+                                           nepochs, batch_size, validation_split)
 
             
                 print("\n Evaluate the new model against the test set:")
@@ -259,7 +268,7 @@ def main():
                     with open("Outputs/training/summary.txt", "w") as f:
                         f.write("Parameters:\n")
                         #f.write("         classifier_model: {}\n".format(model.get_config()))
-                        f.write("LR {}, epochs {}, batch_size {}, VS {} \n".format(learning_rate,epochs,batch_size,validation_split))
+                        f.write("LR {}, epochs {}, batch_size {}, VS {} \n".format(learning_rate,nepochs,batch_size,validation_split))
                         f.write(": {}\n".format(classification_report(y_test, testPredict.round(), target_names=["signal", "background"])))
                         f.write("\nAUC:{}\n".format(auc))
                     
