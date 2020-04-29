@@ -13,7 +13,7 @@ np.random.seed(seed)
 
 import argparse
 parser = argparse.ArgumentParser(description='Prepare classifier')
-parser.add_argument('-t','--type', required=True, type=str, choices=['plot', 'train','apply'], help='Choose processing type: explore variable [plot], train the model [train], or apply existing model [apply] ')
+parser.add_argument('-t','--type', required=True, type=str, choices=['plot', 'train','read','apply'], help='Choose processing type: explore variable [plot], train the model [train], load previously trained model to do plots [read] or apply existing model [apply] ')
 parser.add_argument('-s','--samples', nargs='+', default=['ttW','ttbar'], help='Choose list of samples to run over ')
 parser.add_argument('-c','--clean', default=False, help='Use selected list of variables ')
 
@@ -23,7 +23,7 @@ process_type = vars(args)["type"]
 sample_list = vars(args)["samples"]
 doclean = vars(args)["clean"]
 
-if process_type =='train' or process_type == 'apply' :
+if process_type =='train' or process_type == 'read' or process_type == 'apply' :
     from sklearn.metrics import roc_auc_score, roc_curve, auc
     from sklearn.metrics import classification_report
     from sklearn.preprocessing import StandardScaler
@@ -210,7 +210,13 @@ def main():
         plot_var(dfs,sample_list,'Njets')
         plot_var(dfs,['ttW','ttbar'],'Njets',False)
 
-    else:
+    elif process_type == 'apply':
+        print("apply mode")
+        model = load_model('Outputs/training/model_nn_v0.h5')
+
+
+    elif process_type == 'read' or process_type == 'train':
+
         if dfs:
             print("prepare for training, ")
             X_train, X_test, y_train, y_test = pred_ds(dfs)
@@ -233,10 +239,10 @@ def main():
                 list_of_metrics_to_plot = ['loss','val_loss']
                 plot_curve(epochs, hist, list_of_metrics_to_plot)
                 model.save('Outputs/training/model_nn_v0.h5')
-            elif process_type == 'apply':
+            elif process_type == 'read':
                 model = load_model('Outputs/training/model_nn_v0.h5')
 
-            if model:
+            if model and (process_type != 'apply'):
                 testPredict = model.predict(X_test)
                 xt_p = {}
                 x_sig,x_bkg =sig_bkg_ds_separate(X_test,y_test)
