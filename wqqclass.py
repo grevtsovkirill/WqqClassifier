@@ -73,7 +73,7 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
         stack_var_col.append(samples[i]['color'])
 
     if do_stack:
-        plt.figure(1) 
+        plt.figure("stack") 
         plt.hist( stack_var, binning[var], histtype='step',
                   weights=stack_var_w,
                   label=stack_var_leg,
@@ -84,9 +84,10 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
         plt.xlabel(var,fontsize=12)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
-        plt.savefig('Plots/stack/'+var+'.png', transparent=True)
+        plt.savefig('Outputs/stack/'+var+'.png', transparent=True)
+        plt.close("stack")
     else:
-        plt.figure(2) 
+        plt.figure("norm") 
         plt.hist( stack_var, binning[var], histtype='step',
                   weights=stack_var_w,
                   label=stack_var_leg,
@@ -98,7 +99,8 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
         plt.xlabel(var,fontsize=12)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
-        plt.savefig('Plots/norm/'+var+'.png', transparent=True)
+        plt.savefig('Outputs/norm/'+var+'.png', transparent=True)
+        plt.close("norm")
     
 
 def pred_ds(dfs,test_samp_size=0.33):    
@@ -108,6 +110,26 @@ def pred_ds(dfs,test_samp_size=0.33):
     y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables                                                                       
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_samp_size)
     return X_train, X_test, y_train, y_test
+
+
+def sig_bkg_ds_separate(X, y,key="Predict"):
+    el,cnt = np.unique(y,return_counts=True)
+    print(el,cnt)
+    
+    xt_sig = np.zeros(shape=(cnt[1],len(X[0])))
+    xt_bkg = np.zeros(shape=(cnt[0],len(X[0])))
+    i_s=0
+    i_b=0
+    for i in range(len(y)):
+        if y[i]==samples['ttW']['class']:
+            xt_sig[i_s]=X[i]
+            i_s+=1
+        else:
+            xt_bkg[i_b]=X[i]
+            i_b+=1
+            
+    print(i_s,i_b)
+    return xt_sig, xt_bkg
 
 def create_model(my_learning_rate):
     dense_dim=len(sel_vars())
@@ -132,7 +154,7 @@ def train_model(model, train_features, train_label, epochs,
     return epochs, hist
 
 def plot_curve(epochs, hist, list_of_metrics,save=True):
-    plt.figure()
+    plt.figure("loss")
     plt.xlabel("Epoch")
     plt.ylabel("Value")
     
@@ -144,13 +166,14 @@ def plot_curve(epochs, hist, list_of_metrics,save=True):
     plt.xlabel('epochs',fontsize=14)
     plt.legend()
     if save:
-        plt.savefig("Plots/training/loss_NNw.png", transparent=True)
+        plt.savefig("Outputs/training/loss_NNw.png", transparent=True)
     else:
         plt.show()
+    plt.close("loss")
 
 def get_roc(y_test, y_predicted):
     fpr, tpr, _ = roc_curve(y_test, y_predicted)
-    plt.figure()
+    plt.figure("roc")
     lw = 2
     plt.plot(tpr, 1-fpr, 
              lw=lw, label='%s ROC (%0.3f)' % ("NN ", roc_auc_score(y_test, y_predicted))) #color='darkorange',
@@ -165,8 +188,8 @@ def get_roc(y_test, y_predicted):
     plt.ylabel("Background rejection")
     plt.title('Background rejection versus Signal efficiency')
     plt.legend(loc="lower left")
-    plt.savefig("Plots/training/ROC_NN_ttw_ttbar.png", transparent=True)
-    
+    plt.savefig("Outputs/training/ROC_NN_ttw_ttbar.png", transparent=True)
+    plt.close("roc")
 
 
 def main():
@@ -182,11 +205,12 @@ def main():
             print("prepare for training, ")
             X_train, X_test, y_train, y_test = pred_ds(dfs)
 
+            learning_rate = 0.003
+            epochs = 500
+            batch_size = 16000
+            validation_split = 0.2
+
             if process_type == 'train':
-                learning_rate = 0.003
-                epochs = 500
-                batch_size = 16000
-                validation_split = 0.2
 
                 model = create_model(learning_rate)        
                 epochs, hist = train_model(model, X_train, y_train, 
@@ -198,44 +222,46 @@ def main():
                 
                 list_of_metrics_to_plot = ['loss','val_loss']
                 plot_curve(epochs, hist, list_of_metrics_to_plot)
-                model.save('Models/nn_v0.h5')
+                model.save('Outputs/training/model_nn_v0.h5')
             elif process_type == 'apply':
-                model = load_model('Models/nn_v0.h5')
+                model = load_model('Outputs/training/model_nn_v0.h5')
 
             if model:
-                el,cnt = np.unique(y_test,return_counts=True)
-                print(el,cnt)
-                
-                xt_sig = np.zeros(shape=(cnt[1],len(X_test[0])))
-                xt_bkg = np.zeros(shape=(cnt[0],len(X_test[0])))
-                i_s=0
-                i_b=0
-                #for i in range(50):
-                for i in range(len(y_test)):
-                    if y_test[i]==1:
-                        #print("s= ", X_test[i])
-                        xt_sig[i_s]=X_test[i]
-                        i_s+=1
-                    else:
-                        xt_bkg[i_b]=X_test[i]
-                        i_b+=1
-                        #print("b")
-                print(i_s,i_b)
                 testPredict = model.predict(X_test)
-                xt_sig_p = model.predict(xt_sig)
-                xt_bkg_p = model.predict(xt_bkg)
+                xt_p = {}
+                x_sig,x_bkg =sig_bkg_ds_separate(X_test,y_test)
+                xt_p['ttW'] = model.predict(x_sig)
+                xt_p['ttbar'] = model.predict(x_bkg)
+                x_p = {}
+                x_sig,x_bkg =sig_bkg_ds_separate(X_train,y_train)
+                x_p['ttW'] = model.predict(x_sig)
+                x_p['ttbar'] = model.predict(x_bkg)
+                
                 bins = [i/40 for i in range(40)]
                 bins.append(1.)
 
-                plt.hist(xt_sig_p, bins, alpha=0.5, label='Signal Predict', density=True, color='#1f77b4')
-                plt.hist(xt_bkg_p, bins, alpha=0.5, label='Bakground Predict', density=True, color='#ff7f0e')
-                plt.legend(loc="lower left")
-                plt.savefig("Plots/training/classPred_NN_ttw_ttbar.png", transparent=True)
+                plt.figure("response")
+                for i in sample_list:                    
+                    plt.hist(xt_p[i], bins, alpha=0.5, label=i+' Predict', density=True, color=samples[i]['color'])
+                    plt.hist(x_p[i], bins, alpha=1, label=i+' Train', density=True, color=samples[i]['color'], histtype='step')
+                plt.legend(loc="upper right")
+                plt.savefig("Outputs/training/classPred_NN_ttw_ttbar.png", transparent=True)
+                plt.close("response")
                 
                 print( classification_report(y_test, testPredict.round(), target_names=["signal", "background"]))
-                print( "Area under ROC curve: %.4f"%(roc_auc_score(y_test, testPredict)))
+                auc = roc_auc_score(y_test, testPredict)
+                print( "Area under ROC curve: %.4f"%(auc))
                 get_roc(y_test,testPredict)
 
+                print_summary = True
+                if print_summary:
+                    with open("Outputs/training/summary.txt", "w") as f:
+                        f.write("Parameters:\n")
+                        #f.write("         classifier_model: {}\n".format(model.get_config()))
+                        f.write("LR {}, epochs {}, batch_size {}, VS {} \n".format(learning_rate,epochs,batch_size,validation_split))
+                        f.write(": {}\n".format(classification_report(y_test, testPredict.round(), target_names=["signal", "background"])))
+                        f.write("\nAUC:{}\n".format(auc))
+                    
 
 if __name__ == "__main__":
     main() 
