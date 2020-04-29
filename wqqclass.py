@@ -203,10 +203,38 @@ def main():
                 model = load_model('Models/nn_v0.h5')
 
             if model:
+                el,cnt = np.unique(y_test,return_counts=True)
+                print(el,cnt)
+                
+                xt_sig = np.zeros(shape=(cnt[1],len(X_test[0])))
+                xt_bkg = np.zeros(shape=(cnt[0],len(X_test[0])))
+                i_s=0
+                i_b=0
+                #for i in range(50):
+                for i in range(len(y_test)):
+                    if y_test[i]==1:
+                        #print("s= ", X_test[i])
+                        xt_sig[i_s]=X_test[i]
+                        i_s+=1
+                    else:
+                        xt_bkg[i_b]=X_test[i]
+                        i_b+=1
+                        #print("b")
+                print(i_s,i_b)
                 testPredict = model.predict(X_test)
-                get_roc(y_test,testPredict)
+                xt_sig_p = model.predict(xt_sig)
+                xt_bkg_p = model.predict(xt_bkg)
+                bins = [i/40 for i in range(40)]
+                bins.append(1.)
+
+                plt.hist(xt_sig_p, bins, alpha=0.5, label='Signal Predict', density=True, color='#1f77b4')
+                plt.hist(xt_bkg_p, bins, alpha=0.5, label='Bakground Predict', density=True, color='#ff7f0e')
+                plt.legend(loc="lower left")
+                plt.savefig("Plots/training/classPred_NN_ttw_ttbar.png", transparent=True)
+                
                 print( classification_report(y_test, testPredict.round(), target_names=["signal", "background"]))
                 print( "Area under ROC curve: %.4f"%(roc_auc_score(y_test, testPredict)))
+                get_roc(y_test,testPredict)
 
 
 if __name__ == "__main__":
