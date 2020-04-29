@@ -116,9 +116,12 @@ def pred_ds(dfs,test_samp_size=0.33):
     X = np.concatenate((dfs['ttW'],dfs['ttbar']))
     sc = StandardScaler(copy=False)
     X = sc.fit_transform(X)
-    y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables                                                                       
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_samp_size)
-    return X_train, X_test, y_train, y_test
+    y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables
+    class_weight = len(dfs['ttW'])/len(dfs['ttbar'])
+    print("class_weight ", class_weight)
+    w = np.concatenate(( [1]*(dfs['ttW'].shape[0]),[class_weight]*(dfs['ttbar'].shape[0]))) # class lables                                                                       
+    X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X, y, w, test_size = test_samp_size)
+    return X_train, X_test, y_train, y_test, w_train, w_test
 
 
 def sig_bkg_ds_separate(X, y,key="Predict"):
@@ -144,7 +147,6 @@ def create_model(my_learning_rate):
     dense_dim=len(sel_vars())
     model = Sequential()
     model.add(Dense(dense_dim, input_dim=dense_dim, activation='relu'))
-    #model.add(Dense(20, activation='relu'))
     model.add(Dense(40, activation='relu'))
     model.add(Dropout(rate=0.005, noise_shape=None, seed=None))
     model.add(Dense(50, activation='relu'))
@@ -153,11 +155,13 @@ def create_model(my_learning_rate):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
-def train_model(model, train_features, train_label, epochs,
-                batch_size=None, validation_split=0.1):
-    history = model.fit(x=train_features, y=train_label, batch_size=batch_size,
-                      epochs=epochs, shuffle=True, 
-                      validation_split=validation_split)
+def train_model(model, train_features, train_label, weights,
+                epochs, batch_size=None, validation_split=0.1):
+    history = model.fit(x=train_features, y=train_label,
+                        sample_weight=weights,
+                        batch_size=batch_size,
+                        epochs=epochs, shuffle=True, 
+                        validation_split=validation_split)
     epochs = history.epoch
     hist = pd.DataFrame(history.history)
 
@@ -219,7 +223,7 @@ def main():
 
         if dfs:
             print("prepare for training, ")
-            X_train, X_test, y_train, y_test = pred_ds(dfs)
+            X_train, X_test, y_train, y_test, w_train, w_test  = pred_ds(dfs)
 
             learning_rate = 0.001
             nepochs = 500
@@ -229,7 +233,7 @@ def main():
             if process_type == 'train':
 
                 model = create_model(learning_rate)        
-                epochs, hist = train_model(model, X_train, y_train, 
+                epochs, hist = train_model(model, X_train, y_train, w_train,
                                            nepochs, batch_size, validation_split)
 
             
