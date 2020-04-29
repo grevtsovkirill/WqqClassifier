@@ -5,17 +5,21 @@ BASE       = '../Files/processed/'
 samples = {    
     'ttW' : {
         'filename' : 'skimReco_413008_xs.csv',   
-        'color'    : 'red',
-        'group'   : 'ttW'
+        'color'    : 'tomato',
+        'group'   : 'ttW',
+        'class'   : 1.
     },
     'ttZmumu' : {
         'filename' : 'skimReco_410219_xs.csv',   
         'group'   : 'ttZ',   
-        'color'    : 'blue',   
+        'color'    : 'steelblue',
+        'class'   : -99.
+        
     },    
     'ttbar' : {
         'filename' : 'skimReco_410470_xs.csv',   
-        'color'    : 'green',
-        'group'   : 'ttbar'
+        'color'    : 'slategray',
+        'group'   : 'ttbar',
+        'class'   : 0.
     }
 }
