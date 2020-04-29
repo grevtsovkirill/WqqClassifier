@@ -55,6 +55,7 @@ def data_load(in_list, do_clean=doclean):
             print(s,'  ',samples[s]['filename'])
             df[s] = pd.read_csv(BASE+samples[s]['filename'])
             if do_clean:
+                df[s] = df[s].loc[df[s].region==0]
                 df[s] = df[s][var_list]
         else:
             print(s,' is not in available sample list')
