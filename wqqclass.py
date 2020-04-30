@@ -64,18 +64,34 @@ def data_load(in_list, do_clean=doclean):
             break
     return df
 
-def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
+def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
     stack_var=[]
     stack_var_w=[]
     stack_var_leg=[]
     stack_var_yields=[]
     stack_var_s=[]
     stack_var_col=[]
+    outname=''
     for i in lab_list:
-        stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
-        stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
-        stack_var_yields.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
-        yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
+        if sel_val==0:
+            stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
+            stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
+            stack_var_yields.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
+            yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
+        else:
+            outname=str(sel_val)
+            print(sel_val)
+            print(len(df_bkg[i]))
+            df_bkg[i] = df_bkg[i].loc[df_bkg[i].region==0]
+            print("reg0: ",len(df_bkg[i]))
+            df_bkg[i] = df_bkg[i].loc[df_bkg[i].score>sel_val]
+            print("selval: ",len(df_bkg[i]))
+            stack_var.append(df_bkg[i][var]*GeV)
+            stack_var_w.append(df_bkg[i].weight_tot)
+            stack_var_yields.append(df_bkg[i].weight_tot.sum())
+            yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.sum())
+            
+        
         #print(i," ", yield_val)
         stack_var_s.append(i)
         stack_var_leg.append(samples[i]['group']+" "+yield_val)
@@ -97,9 +113,9 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
         plt.ylim(1e-1, 1e8)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
-        plt.savefig('Outputs/stack/'+var+'.png') #, transparent=True)
+        plt.savefig('Outputs/stack/'+var+outname+'.png') #, transparent=True)
         plt.close("stack")
-        with open("Outputs/stack/yields.txt", "w") as f:
+        with open("Outputs/stack/yields"+outname+".txt", "w") as f:
             f.write("Samples:{}\n".format(stack_var_s))
             f.write("Yields:{}\n".format(stack_var_yields))
     else:
@@ -247,7 +263,10 @@ def main():
             predictScore = model.predict(df_trans)
             dfs[s].loc[:,'score'] = dfs[s].loc[:,'Njets']
             dfs[s].loc[:,'score'] = predictScore
-            print(dfs[s].head())
+            #print(dfs[s].head())
+
+        print(dfs['ttW'].head())
+        plot_var(dfs,sample_list,'Njets',True,0.6)
             
     elif process_type == 'read' or process_type == 'train':
 
