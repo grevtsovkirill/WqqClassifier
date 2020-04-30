@@ -233,8 +233,22 @@ def main():
     elif process_type == 'apply':
         print("apply mode")
         model = load_model('Outputs/training/model_nn_v0.h5')
+        with open('Outputs/training/scaler.pickle', 'rb') as f:
+            sc = pickle.load(f)
 
-
+            #def model_create_feature():
+        var_list=sel_vars()    
+        for s in sample_list:
+            #print(dfs[s].columns)
+            df_trans = dfs[s][var_list]
+            #print("before:\n",df_trans.head())
+            df_trans = sc.transform(df_trans)
+            #print("after transformation:\n",df_trans[:5])
+            predictScore = model.predict(df_trans)
+            dfs[s].loc[:,'score'] = dfs[s].loc[:,'Njets']
+            dfs[s].loc[:,'score'] = predictScore
+            print(dfs[s].head())
+            
     elif process_type == 'read' or process_type == 'train':
 
         if dfs:
