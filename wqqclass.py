@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import pickle
 
 from samples import *
 
@@ -68,13 +69,15 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
     stack_var_w=[]
     stack_var_leg=[]
     stack_var_yields=[]
+    stack_var_s=[]
     stack_var_col=[]
     for i in lab_list:
         stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
         stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
         stack_var_yields.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
         yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
-        print(i," ", yield_val)
+        #print(i," ", yield_val)
+        stack_var_s.append(i)
         stack_var_leg.append(samples[i]['group']+" "+yield_val)
         stack_var_col.append(samples[i]['color'])
 
@@ -94,8 +97,11 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,GeV=1):
         plt.ylim(1e-1, 1e8)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
-        plt.savefig('Outputs/stack/'+var+'.png', transparent=True)
+        plt.savefig('Outputs/stack/'+var+'.png') #, transparent=True)
         plt.close("stack")
+        with open("Outputs/stack/yields.txt", "w") as f:
+            f.write("Samples:{}\n".format(stack_var_s))
+            f.write("Yields:{}\n".format(stack_var_yields))
     else:
         plt.figure("norm") 
         plt.hist( stack_var, binning[var], histtype='step',
@@ -117,6 +123,8 @@ def pred_ds(dfs,test_samp_size=0.33):
     X = np.concatenate((dfs['ttW'],dfs['ttbar']))
     sc = StandardScaler(copy=False)
     X = sc.fit_transform(X)
+    with open('Outputs/training/scaler.pickle', 'wb') as f:
+        pickle.dump(sc, f)
     y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables
     class_weight = len(dfs['ttW'])/len(dfs['ttbar'])
     print("class_weight ", class_weight)
