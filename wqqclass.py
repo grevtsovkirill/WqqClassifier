@@ -38,6 +38,7 @@ scale_to_GeV=0.001
 binning = {"DRll01": np.linspace(-2, 6, 24),
            "max_eta": np.linspace(0, 2.5, 26),
            "Njets": np.linspace(0, 10, 10),
+           "mjj": np.linspace(0, 150, 150),
           }
 
 def sel_vars(list_name="varlist.json"):
@@ -118,6 +119,8 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
         with open("Outputs/stack/yields"+outname+".txt", "w") as f:
             f.write("Samples:{}\n".format(stack_var_s))
             f.write("Yields:{}\n".format(stack_var_yields))
+            f.write("S/B:{}\n".format(stack_var_yields[0]/stack_var_yields[1]))
+            f.write("S/sqrtB:{}\n".format(stack_var_yields[0]/np.sqrt(stack_var_yields[1])))
     else:
         plt.figure("norm") 
         plt.hist( stack_var, binning[var], histtype='step',
@@ -265,8 +268,9 @@ def main():
             dfs[s].loc[:,'score'] = predictScore
             #print(dfs[s].head())
 
-        print(dfs['ttW'].head())
-        plot_var(dfs,sample_list,'Njets',True,0.6)
+        for i in range(3,10):
+            print(i/10)
+            plot_var(dfs,sample_list,'mjj',True,i/10)
             
     elif process_type == 'read' or process_type == 'train':
 
@@ -319,7 +323,7 @@ def main():
                 plt.savefig("Outputs/training/classPred_NN_ttw_ttbar.png", transparent=True)
                 plt.close("response")
                 
-                print( classification_report(y_test, testPredict.round(), target_names=["signal", "background"]))
+                print( classification_report(y_test, testPredict.round(), target_names=["ttbar", "ttW"]))# 
                 auc = roc_auc_score(y_test, testPredict)
                 print( "Area under ROC curve: %.4f"%(auc))
                 get_roc(y_test,testPredict)
