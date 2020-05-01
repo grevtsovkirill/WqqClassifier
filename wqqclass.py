@@ -81,12 +81,8 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
             yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
         else:
             outname=str(sel_val)
-            print(sel_val)
-            print(len(df_bkg[i]))
             df_bkg[i] = df_bkg[i].loc[df_bkg[i].region==0]
-            print("reg0: ",len(df_bkg[i]))
             df_bkg[i] = df_bkg[i].loc[df_bkg[i].score>sel_val]
-            print("selval: ",len(df_bkg[i]))
             stack_var.append(df_bkg[i][var]*GeV)
             stack_var_w.append(df_bkg[i].weight_tot)
             stack_var_yields.append(df_bkg[i].weight_tot.sum())
