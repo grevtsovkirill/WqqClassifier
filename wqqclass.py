@@ -57,6 +57,7 @@ def data_load(in_list, do_clean=doclean):
         if s in samples:
             print(s,'  ',samples[s]['filename'])
             df[s] = pd.read_csv(BASE+samples[s]['filename'])
+            #df[s] = df[s].loc[(df[s].mjj>60) & (df[s].mjj<100)]
             if do_clean:
                 df[s] = df[s].loc[df[s].region==0]
                 df[s] = df[s][var_list]
@@ -107,7 +108,7 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
                   alpha=0.8
         )
         plt.xlabel(var,fontsize=12)
-        plt.ylim(1e-1, 1e8)
+        plt.ylim(1e-3, 1e6)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
         plt.savefig('Outputs/stack/'+var+outname+'.png') #, transparent=True)
