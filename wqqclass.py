@@ -5,8 +5,8 @@ import json
 import pickle
 
 from samples import *
-
-
+import model as md
+import plotter as pl
 seed=8
 np.random.seed(seed)
 
@@ -73,73 +73,6 @@ def data_load(in_list, do_clean=doclean):
             break
     return df
 
-def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
-    stack_var=[]
-    stack_var_w=[]
-    stack_var_leg=[]
-    stack_var_yields=[]
-    stack_var_s=[]
-    stack_var_col=[]
-    outname=''
-    for i in lab_list:
-        if sel_val==0:
-            stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
-            stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
-            stack_var_yields.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
-            yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
-        else:
-            outname=str(sel_val)
-            df_bkg[i] = df_bkg[i].loc[df_bkg[i].region==0]
-            df_bkg[i] = df_bkg[i].loc[df_bkg[i].score>sel_val]
-            stack_var.append(df_bkg[i][var]*GeV)
-            stack_var_w.append(df_bkg[i].weight_tot)
-            stack_var_yields.append(df_bkg[i].weight_tot.sum())
-            yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.sum())
-            
-        
-        #print(i," ", yield_val)
-        stack_var_s.append(i)
-        stack_var_leg.append(samples[i]['group']+" "+yield_val)
-        stack_var_col.append(samples[i]['color'])
-
-    if do_stack:
-        plt.figure("stack") 
-        plt.hist( stack_var, binning[var], histtype='step',
-                  weights=stack_var_w,
-                  label=stack_var_leg,
-                  color = stack_var_col,
-                  stacked=True, 
-                  fill=True,
-                  log=True,
-                  linewidth=2,
-                  alpha=0.8
-        )
-        plt.xlabel(var,fontsize=12)
-        plt.ylim(1e-3, 1e6)
-        plt.ylabel('# Events',fontsize=12) 
-        plt.legend()
-        plt.savefig('Outputs/stack/'+var+outname+'.png') #, transparent=True)
-        plt.close("stack")
-        with open("Outputs/stack/yields"+outname+".txt", "w") as f:
-            f.write("Samples:{}\n".format(stack_var_s))
-            f.write("Yields:{}\n".format(stack_var_yields))
-            f.write("S/B:{}\n".format(stack_var_yields[0]/stack_var_yields[1]))
-            f.write("S/sqrtB:{}\n".format(stack_var_yields[0]/np.sqrt(stack_var_yields[1])))
-    else:
-        plt.figure("norm") 
-        plt.hist( stack_var, binning[var], histtype='step',
-                  weights=stack_var_w,
-                  label=stack_var_leg,
-                  color = stack_var_col,
-                  density=1,
-                  stacked=False, 
-                  fill=False, 
-                  linewidth=2, alpha=0.8)
-        plt.xlabel(var,fontsize=12)
-        plt.ylabel('# Events',fontsize=12) 
-        plt.legend()
-        plt.savefig('Outputs/norm/'+var+'.png', transparent=True)
-        plt.close("norm")
     
 
 def pred_ds(dfs,test_samp_size=0.33):    
@@ -175,39 +108,6 @@ def sig_bkg_ds_separate(X, y,key="Predict"):
     print(i_s,i_b)
     return xt_sig, xt_bkg
 
-def create_model(my_learning_rate):
-    dense_dim=len(sel_vars())
-    model = Sequential()
-    model.add(Dense(dense_dim, input_dim=dense_dim, activation='relu'))
-    model.add(Dense(30, activation='relu'))    
-    #model.add(Dense(20, activation='relu'))
-    model.add(Dense(10, activation='relu'))
-    #model.add(Dropout(rate=0.005, noise_shape=None, seed=None))
-    model.add(Dense(1, activation='sigmoid',name='classifier_output'))
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    return model
-
-def train_model(model, train_features, train_label, weights,
-                epochs, batch_size=None, validation_split=0.1):
-
-    
-    earlyStop = EarlyStopping(monitor='val_loss', verbose=True, patience=10)
-
-    nn_mChkPt = ModelCheckpoint('Outputs/training/nn_weights.h5',monitor='val_loss', verbose=True,
-                                  save_best_only=True,
-                                  save_weights_only=True)
-    
-    history = model.fit(x=train_features, y=train_label,
-                        sample_weight=weights,
-                        batch_size=batch_size,
-                        epochs=epochs, shuffle=True, 
-                        validation_split=validation_split,
-                        callbacks=[earlyStop, nn_mChkPt]
-    )
-    epochs = history.epoch
-    hist = pd.DataFrame(history.history)
-
-    return epochs, hist
 
 def plot_curve(epochs, hist, list_of_metrics,save=True):
     plt.figure("loss")
@@ -248,10 +148,10 @@ def get_roc(y_test, y_predicted):
 def main():
     print("load data")
     dfs=data_load(sample_list)
-    #print(dfs['ttW'].columns)
+    print(dfs['ttW'].columns)
     if process_type =='plot':
-        plot_var(dfs,sample_list,'Njets')
-        plot_var(dfs,['ttW','ttbar'],'Njets',False)
+        pl.plot_var(dfs,sample_list,'Njets')
+        pl.plot_var(dfs,['ttW','ttbar'],'Njets',False)
 
     elif process_type == 'apply':
         print("apply mode")
@@ -274,7 +174,7 @@ def main():
 
         for i in range(3,10):
             print(i/10)
-            plot_var(dfs,sample_list,'mjj',True,i/10)
+            pl.plot_var(dfs,sample_list,'mjj',True,i/10)
             
     elif process_type == 'read' or process_type == 'train':
 
@@ -289,8 +189,8 @@ def main():
 
             if process_type == 'train':
 
-                model = create_model(learning_rate)        
-                epochs, hist = train_model(model, X_train, y_train, w_train,
+                model = md.create_model(learning_rate,var_list)        
+                epochs, hist = md.train_model(model, X_train, y_train, w_train,
                                            nepochs, batch_size, validation_split)
 
             
