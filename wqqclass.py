@@ -56,7 +56,14 @@ def data_load(in_list, do_clean=doclean):
     for s in in_list:
         if s in samples:
             print(s,'  ',samples[s]['filename'])
-            df[s] = pd.read_csv(BASE+samples[s]['filename'])
+            flist = []
+            for i in samples[s]['filename']:
+                print(i)
+                dftmp = pd.read_csv(BASE+i, index_col=None, header=0)
+                flist.append(dftmp)
+
+            df[s] = pd.concat(flist, axis=0, ignore_index=True)
+            #df[s] = pd.read_csv(BASE+samples[s]['filename'])
             #df[s] = df[s].loc[(df[s].mjj>60) & (df[s].mjj<100)]
             if do_clean:
                 df[s] = df[s].loc[df[s].region==0]
