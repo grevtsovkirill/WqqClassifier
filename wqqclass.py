@@ -7,6 +7,7 @@ import pickle
 from samples import *
 import model as md
 import plotter as pl
+import helpers as hp
 seed=8
 np.random.seed(seed)
 
@@ -25,7 +26,7 @@ sample_list = vars(args)["samples"]
 doclean = vars(args)["clean"]
 
 if process_type =='train' or process_type == 'read' or process_type == 'apply' :
-    from sklearn.metrics import roc_auc_score, roc_curve, auc
+
     from sklearn.metrics import classification_report
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
@@ -102,40 +103,6 @@ def sig_bkg_ds_separate(X, y,key="Predict"):
     return xt_sig, xt_bkg
 
 
-def plot_curve(epochs, hist, list_of_metrics,save=True):
-    plt.figure("loss")
-    label_val = list_of_metrics[0]
-    for m in list_of_metrics:
-        x = hist[m]
-        plt.plot(epochs[1:], x[1:], label=m)    
-    plt.ylabel(label_val,fontsize=14)
-    plt.xlabel('epochs',fontsize=14)
-    plt.legend()
-    if save:
-        plt.savefig("Outputs/training/"+label_val+"_NNw.png", transparent=True)
-    else:
-        plt.show()
-    plt.close("loss")
-
-def get_roc(y_test, y_predicted):
-    fpr, tpr, _ = roc_curve(y_test, y_predicted)
-    plt.figure("roc")
-    lw = 2
-    plt.plot(tpr, 1-fpr, 
-             lw=lw, label='%s ROC (%0.3f)' % ("NN ", roc_auc_score(y_test, y_predicted))) #color='darkorange',
-    
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    #plt.plot(fpr, tpr, 
-    #plt.xlabel('False Positive Rate')
-    #plt.ylabel('True Positive Rate')
-    #plt.title('Receiver operating characteristic example')
-    plt.xlabel("Signal efficiency")
-    plt.ylabel("Background rejection")
-    plt.title('Background rejection versus Signal efficiency')
-    plt.legend(loc="lower left")
-    plt.savefig("Outputs/training/ROC_NN_ttw_ttbar.png", transparent=True)
-    plt.close("roc")
 
 
 def main():
@@ -175,9 +142,9 @@ def main():
             print("prepare for training, ")
             X_train, X_test, y_train, y_test, w_train, w_test  = pred_ds(dfs)
 
-            learning_rate = 0.001
+            learning_rate = 0.01
             nepochs = 500
-            batch_size = 32
+            batch_size = 256
             validation_split = 0.2
 
             if process_type == 'train':
@@ -190,9 +157,9 @@ def main():
                 print("\n Evaluate the new model against the test set:")
                 print(model.evaluate(X_test, y_test, batch_size=batch_size))
                 list_of_metrics_to_plot = ['loss','val_loss']
-                plot_curve(epochs, hist, list_of_metrics_to_plot)
+                hp.plot_curve(epochs, hist, list_of_metrics_to_plot)
                 list_of_metrics_to_plot = ['acc','val_acc']
-                plot_curve(epochs, hist, list_of_metrics_to_plot)
+                hp.plot_curve(epochs, hist, list_of_metrics_to_plot)
 
                 model.save('Outputs/training/model_nn_v0.h5')
             elif process_type == 'read':
@@ -223,7 +190,7 @@ def main():
                 print( classification_report(y_test, testPredict.round(), target_names=["ttbar", "ttW"]))# 
                 auc = roc_auc_score(y_test, testPredict)
                 print( "Area under ROC curve: %.4f"%(auc))
-                get_roc(y_test,testPredict)
+                hp.get_roc(y_test,testPredict)
 
                 print_summary = True
                 if print_summary:
