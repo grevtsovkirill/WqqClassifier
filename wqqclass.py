@@ -34,13 +34,6 @@ if process_type =='train' or process_type == 'read' or process_type == 'apply' :
     from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 
-scale_to_GeV=0.001
-binning = {"DRll01": np.linspace(-2, 6, 24),
-           "max_eta": np.linspace(0, 2.5, 26),
-           "Njets": np.linspace(0, 10, 10),
-           "mjj": np.linspace(0, 150, 150),
-          }
-
 def sel_vars(list_name="varlist.json"):
     with open(list_name) as vardict:
         variablelist = json.load(vardict)[:]
@@ -188,7 +181,7 @@ def main():
             validation_split = 0.2
 
             if process_type == 'train':
-
+                var_list=sel_vars() 
                 model = md.create_model(learning_rate,var_list)        
                 epochs, hist = md.train_model(model, X_train, y_train, w_train,
                                            nepochs, batch_size, validation_split)

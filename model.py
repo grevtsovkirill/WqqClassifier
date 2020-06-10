@@ -1,5 +1,13 @@
+from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from keras.layers import Layer, Input, Dense, Dropout
+from keras.models import Sequential, load_model
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+
 def create_model(my_learning_rate,var_list):
-    dense_dim=var_list
+    dense_dim=len(var_list)
     model = Sequential()
     model.add(Dense(dense_dim, input_dim=dense_dim, activation='relu'))
     model.add(Dense(30, activation='relu'))    
