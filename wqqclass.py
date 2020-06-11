@@ -1,13 +1,14 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import json
 import pickle
 
 from samples import *
+import data_loader as dl
 import model as md
 import plotter as pl
 import helpers as hp
+
 seed=8
 np.random.seed(seed)
 
@@ -28,90 +29,29 @@ doclean = vars(args)["clean"]
 if process_type =='train' or process_type == 'read' or process_type == 'apply' :
 
     from sklearn.metrics import classification_report
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import roc_auc_score, roc_curve, auc
     from sklearn.model_selection import train_test_split
     from keras.layers import Layer, Input, Dense, Dropout
     from keras.models import Sequential, load_model
     from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 
-def sel_vars(list_name="varlist.json"):
-    with open(list_name) as vardict:
-        variablelist = json.load(vardict)[:]
 
-    print(variablelist)
-    return variablelist
 
-def data_load(in_list, do_clean=doclean):
-    df = {}
-    if do_clean:
-        var_list=sel_vars()
 
-    for s in in_list:
-        if s in samples:
-            print(s,'  ',samples[s]['filename'])
-            flist = []
-            for i in samples[s]['filename']:
-                print(i)
-                dftmp = pd.read_csv(BASE+i, index_col=None, header=0)
-                flist.append(dftmp)
 
-            df[s] = pd.concat(flist, axis=0, ignore_index=True)
-            #df[s] = pd.read_csv(BASE+samples[s]['filename'])
-            #df[s] = df[s].loc[(df[s].mjj>60) & (df[s].mjj<100)]
-            if do_clean:
-                df[s] = df[s].loc[df[s].region==0]
-                df[s] = df[s][var_list]
-        else:
-            print(s,' is not in available sample list')
-            break
-    return df
-
+def do_plot(dfs,sample_list):
+    pl.plot_var(dfs,sample_list,'Njets')
+    pl.plot_var(dfs,['ttW','ttbar'],'Njets',False)
     
-
-def pred_ds(dfs,test_samp_size=0.33):    
-    X = np.concatenate((dfs['ttW'],dfs['ttbar']))
-    sc = StandardScaler(copy=False)
-    X = sc.fit_transform(X)
-    with open('Outputs/training/scaler.pickle', 'wb') as f:
-        pickle.dump(sc, f)
-    y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables
-    class_weight = len(dfs['ttW'])/len(dfs['ttbar'])
-    print("class_weight ", class_weight)
-    w = np.concatenate(( [1]*(dfs['ttW'].shape[0]),[class_weight]*(dfs['ttbar'].shape[0]))) # class lables                                                                       
-    X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X, y, w, test_size = test_samp_size)
-    return X_train, X_test, y_train, y_test, w_train, w_test
-
-
-def sig_bkg_ds_separate(X, y,key="Predict"):
-    el,cnt = np.unique(y,return_counts=True)
-    print(el,cnt)
-    
-    xt_sig = np.zeros(shape=(cnt[1],len(X[0])))
-    xt_bkg = np.zeros(shape=(cnt[0],len(X[0])))
-    i_s=0
-    i_b=0
-    for i in range(len(y)):
-        if y[i]==samples['ttW']['class']:
-            xt_sig[i_s]=X[i]
-            i_s+=1
-        else:
-            xt_bkg[i_b]=X[i]
-            i_b+=1
-            
-    print(i_s,i_b)
-    return xt_sig, xt_bkg
-
-
-
 
 def main():
     print("load data")
-    dfs=data_load(sample_list)
+
+    dfs=dl.data_load(sample_list,doclean)
     print(dfs['ttW'].columns)
     if process_type =='plot':
-        pl.plot_var(dfs,sample_list,'Njets')
-        pl.plot_var(dfs,['ttW','ttbar'],'Njets',False)
+        do_plot(dfs,sample_list)
 
     elif process_type == 'apply':
         print("apply mode")
@@ -120,7 +60,7 @@ def main():
             sc = pickle.load(f)
 
             #def model_create_feature():
-        var_list=sel_vars()    
+        var_list=dl.sel_vars()    
         for s in sample_list:
             #print(dfs[s].columns)
             df_trans = dfs[s][var_list]
@@ -130,25 +70,27 @@ def main():
             predictScore = model.predict(df_trans)
             dfs[s].loc[:,'score'] = dfs[s].loc[:,'Njets']
             dfs[s].loc[:,'score'] = predictScore
-            #print(dfs[s].head())
+            #print("with score:",dfs[s].head())
 
         for i in range(3,10):
             print(i/10)
-            pl.plot_var(dfs,sample_list,'mjj',True,i/10)
+            pl.plot_var(dfs,sample_list,'mjj',True,i/10,0.001)
+            pl.plot_var(dfs,sample_list,'Njets',True,i/10,1)
+            pl.plot_var(dfs,sample_list,'score',True,i/10,1)
             
     elif process_type == 'read' or process_type == 'train':
 
         if dfs:
             print("prepare for training, ")
-            X_train, X_test, y_train, y_test, w_train, w_test  = pred_ds(dfs)
+            X_train, X_test, y_train, y_test, w_train, w_test  = hp.pred_ds(dfs)
 
-            learning_rate = 0.01
+            learning_rate = 0.001
             nepochs = 500
             batch_size = 256
             validation_split = 0.2
 
             if process_type == 'train':
-                var_list=sel_vars() 
+                var_list=dl.sel_vars() 
                 model = md.create_model(learning_rate,var_list)        
                 epochs, hist = md.train_model(model, X_train, y_train, w_train,
                                            nepochs, batch_size, validation_split)
@@ -168,15 +110,15 @@ def main():
             if model and (process_type != 'apply'):
                 testPredict = model.predict(X_test)
                 xt_p = {}
-                x_sig,x_bkg =sig_bkg_ds_separate(X_test,y_test)
+                x_sig,x_bkg =hp.sig_bkg_ds_separate(X_test,y_test)
                 xt_p['ttW'] = model.predict(x_sig)
                 xt_p['ttbar'] = model.predict(x_bkg)
                 x_p = {}
-                x_sig,x_bkg =sig_bkg_ds_separate(X_train,y_train)
+                x_sig,x_bkg =hp.sig_bkg_ds_separate(X_train,y_train)
                 x_p['ttW'] = model.predict(x_sig)
                 x_p['ttbar'] = model.predict(x_bkg)
                 
-                bins = [i/40 for i in range(40)]
+                bins = [i/80 for i in range(80)]
                 bins.append(1.)
 
                 plt.figure("response")
