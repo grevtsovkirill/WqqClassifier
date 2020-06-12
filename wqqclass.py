@@ -41,8 +41,11 @@ if process_type =='train' or process_type == 'read' or process_type == 'apply' :
 
 
 def do_plot(dfs,sample_list):
-    pl.plot_var(dfs,sample_list,'Njets')
-    pl.plot_var(dfs,['ttW','ttbar'],'Njets',False)
+    varl = ['drll01','Njets','max_eta','mjj']
+    varl = ['max_eta']
+    for i in varl:
+        pl.plot_var(dfs,sample_list,i)
+        pl.plot_var(dfs,sample_list,i,False)
     
 
 def main():
@@ -74,9 +77,9 @@ def main():
 
         for i in range(3,10):
             print(i/10)
-            pl.plot_var(dfs,sample_list,'mjj',True,i/10,0.001)
-            pl.plot_var(dfs,sample_list,'Njets',True,i/10,1)
-            pl.plot_var(dfs,sample_list,'score',True,i/10,1)
+            pl.plot_var(dfs,sample_list,'mjj',True,i/10)
+            pl.plot_var(dfs,sample_list,'Njets',True,i/10)
+            pl.plot_var(dfs,sample_list,'score',True,i/10)
             
     elif process_type == 'read' or process_type == 'train':
 
@@ -86,22 +89,27 @@ def main():
 
             learning_rate = 0.001
             nepochs = 500
-            batch_size = 256
+            batch_size = 512
             validation_split = 0.2
 
             if process_type == 'train':
                 var_list=dl.sel_vars() 
-                model = md.create_model(learning_rate,var_list)        
+                model = md.create_model(learning_rate,var_list)
                 epochs, hist = md.train_model(model, X_train, y_train, w_train,
                                            nepochs, batch_size, validation_split)
 
             
-                print("\n Evaluate the new model against the test set:")
-                print(model.evaluate(X_test, y_test, batch_size=batch_size))
                 list_of_metrics_to_plot = ['loss','val_loss']
                 hp.plot_curve(epochs, hist, list_of_metrics_to_plot)
                 list_of_metrics_to_plot = ['acc','val_acc']
                 hp.plot_curve(epochs, hist, list_of_metrics_to_plot)
+
+                print("\n Train set:")
+                score_tr = model.evaluate(X_train, y_train, batch_size=batch_size)  
+                print(score_tr)
+                print("\n Evaluate the new model against the test set:")
+                score = model.evaluate(X_test, y_test, batch_size=batch_size)  
+                print(score)
 
                 model.save('Outputs/training/model_nn_v0.h5')
             elif process_type == 'read':
