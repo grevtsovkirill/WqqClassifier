@@ -21,15 +21,16 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
     for i in lab_list:
         if sel_val==0:
             #print(df_bkg[i][var].loc[df_bkg[i].region==0].head())
-            stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
-            stack_var_w.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0])
-            stack_var_yields.append(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
-            yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.loc[df_bkg[i].region==0].sum())
+            #stack_var.append(df_bkg[i][var].loc[df_bkg[i].region==0]*GeV)
+            stack_var.append(df_bkg[i][var]*GeV)
+            stack_var_w.append(df_bkg[i].weight_tot)
+            stack_var_yields.append(df_bkg[i].weight_tot.sum())
+            yield_val = '{0:.2f}'.format(df_bkg[i].weight_tot.sum())
             print( yield_val)
         else:
             outname=str(sel_val)
             #print(df_bkg[i][var].loc[df_bkg[i].region==0].head())
-            df_bkg[i] = df_bkg[i].loc[df_bkg[i].region==0]
+            #df_bkg[i] = df_bkg[i].loc[df_bkg[i].region==0]
             df_bkg[i] = df_bkg[i].loc[df_bkg[i].score>sel_val]
             stack_var.append(df_bkg[i][var]*GeV)
             stack_var_w.append(df_bkg[i].weight_tot)
