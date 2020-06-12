@@ -4,7 +4,7 @@ import os
 samples = ['410470','700000']     
 comp = ['a','d','e']
 #option = ""
-ver = "v9"
+ver = "v10"
 
 for i in samples:
     for j in comp:
