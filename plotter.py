@@ -2,15 +2,15 @@ from samples import *
 import matplotlib.pyplot as plt
 import numpy as np  
 scale_to_GeV=0.001
-binning = {"DRll01": np.linspace(-2, 6, 24),
-           "max_eta": np.linspace(0, 2.5, 26),
-           "Njets": np.linspace(0, 10, 10),
-           "mjj": np.linspace(0, 150, 150),
-           "score": np.linspace(0, 1, 20),
+binning = {"drll01": [np.linspace(-2, 6, 24),1],
+           "eta": [np.linspace(0, 2.5, 26),1],
+           "Njets": [np.linspace(0, 10, 10),1],
+           "mjj": [np.linspace(0, 150, 150),scale_to_GeV],
+           "score": [np.linspace(0, 1, 20),1]
           }
 
 
-def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
+def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0):
     stack_var=[]
     stack_var_w=[]
     stack_var_leg=[]
@@ -18,6 +18,15 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
     stack_var_s=[]
     stack_var_col=[]
     outname=''
+    bins = []
+    GeV = 1
+    for i,j in binning.items():
+        if i in var:
+            bins = j[0]
+            GeV = j[1]
+            
+    #print(bins,GeV)
+
     for i in lab_list:
         if sel_val==0:
             #print(df_bkg[i][var].loc[df_bkg[i].region==0].head())
@@ -49,7 +58,7 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
         #print(", stack_var_leg",stack_var_leg)
         #print("stack_var_w",stack_var_w)
         plt.figure("stack") 
-        plt.hist( stack_var, binning[var], histtype='step',
+        plt.hist( stack_var, bins, histtype='step',
                   weights=stack_var_w,
                   label=stack_var_leg,
                   color = stack_var_col,
@@ -76,7 +85,7 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0,GeV=1):
     else:
         print("do norm")
         plt.figure("norm") 
-        plt.hist( stack_var, binning[var], histtype='step',
+        plt.hist( stack_var, bins, histtype='step',
                   weights=stack_var_w,
                   label=stack_var_leg,
                   color = stack_var_col,
