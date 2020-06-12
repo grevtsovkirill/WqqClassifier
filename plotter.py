@@ -2,10 +2,13 @@ from samples import *
 import matplotlib.pyplot as plt
 import numpy as np  
 scale_to_GeV=0.001
-binning = {"drll01": [np.linspace(-2, 6, 24),1],
+binning = {"dr": [np.linspace(-2, 6, 24),1],
            "eta": [np.linspace(0, 2.5, 26),1],
+           "phi": [np.linspace(0, 3.3, 36),1],
            "Njets": [np.linspace(0, 10, 10),1],
            "mjj": [np.linspace(0, 150, 150),scale_to_GeV],
+           "pt": [np.linspace(0, 250, 250),scale_to_GeV],
+           "HT": [np.linspace(0, 350, 350),scale_to_GeV],
            "score": [np.linspace(0, 1, 20),1]
           }
 
