@@ -84,7 +84,18 @@ def main():
     elif process_type == 'read' or process_type == 'train':
 
         if dfs:
-            print("prepare for training, ")
+            
+            print("prepare for training:")
+            print(" - transform input :")
+            cat_list=['l0_id','l1_id','dileptype','mjjctag']
+            noncat_list = list(set(dfs['ttW'].columns)-set(cat_list))
+            for s in sample_list:
+                dfs[s]=hp.val_to_cat(dfs[s],cat_list)
+                dfs[s][noncat_list]=hp.norm_gev(dfs[s][noncat_list])
+
+            var_list= list(dfs['ttW'].columns)
+            print(var_list)
+            print(" - split samples to train/test features/targets :")  
             X_train, X_test, y_train, y_test, w_train, w_test  = hp.pred_ds(dfs)
 
             learning_rate = 0.001
@@ -93,7 +104,7 @@ def main():
             validation_split = 0.2
 
             if process_type == 'train':
-                var_list=dl.sel_vars() 
+                
                 model = md.create_model(learning_rate,var_list)
                 epochs, hist = md.train_model(model, X_train, y_train, w_train,
                                            nepochs, batch_size, validation_split)

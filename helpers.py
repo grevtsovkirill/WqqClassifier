@@ -27,18 +27,31 @@ def sig_bkg_ds_separate(X, y,key="Predict"):
     print(i_s,i_b)
     return xt_sig, xt_bkg
 
+def val_to_cat(df, fnames):
+    if len(fnames)==1:
+        df = pd.concat([df,pd.get_dummies(df[fnames], prefix=fnames)],axis=1)
+    else:
+        for i in fnames:
+            df = pd.concat([df,pd.get_dummies(df[i], prefix=i)],axis=1)
+    df = df.drop(fnames, axis=1)
+    return df
+
+def norm_gev(df):
+    df_max = df.max()
+    df_norm = (df/df_max)
+    return df_norm
 
 def pred_ds(dfs,test_samp_size=0.33):    
     X = np.concatenate((dfs['ttW'],dfs['ttbar']))
     sc = StandardScaler(copy=False)
-    X = sc.fit_transform(X)
+    #X = sc.fit_transform(X)
     with open('Outputs/training/scaler.pickle', 'wb') as f:
         pickle.dump(sc, f)
     y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables
     class_weight = len(dfs['ttW'])/len(dfs['ttbar'])
     print("class_weight ", class_weight)
     w = np.concatenate(( [1]*(dfs['ttW'].shape[0]),[class_weight]*(dfs['ttbar'].shape[0]))) # class lables                                                                       
-    X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X, y, w, test_size = test_samp_size)
+    X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X, y, w, test_size = test_samp_size, random_state=42)
     return X_train, X_test, y_train, y_test, w_train, w_test
 
 
