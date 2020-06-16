@@ -28,6 +28,8 @@ def data_load(in_list, do_clean):
             df[s] = pd.concat(flist, axis=0, ignore_index=True)
             #df[s] = pd.read_csv(BASE+samples[s]['filename'])
             #df[s] = df[s].loc[(df[s].mjj>60) & (df[s].mjj<100)]
+            #df[s] = df[s].loc[(df[s].mjj<150000)]
+            df[s] = df[s].loc[(df[s].Njets==4) | (df[s].Njets==5)]
             if do_clean:
                 #df[s] = df[s].loc[df[s].region==0]
                 df[s] = df[s][var_list]
