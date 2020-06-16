@@ -19,12 +19,14 @@ parser = argparse.ArgumentParser(description='Prepare classifier')
 parser.add_argument('-t','--type', required=True, type=str, choices=['plot', 'train','read','apply'], help='Choose processing type: explore variable [plot], train the model [train], load previously trained model to do plots [read] or apply existing model [apply] ')
 parser.add_argument('-s','--samples', nargs='+', default=['ttW','ttbar'], help='Choose list of samples to run over ')
 parser.add_argument('-c','--clean', default=False, help='Use selected list of variables ')
+parser.add_argument('-d','--debug', default=False, help='debug ')
 
 args = parser.parse_args()
 
 process_type = vars(args)["type"]
 sample_list = vars(args)["samples"]
 doclean = vars(args)["clean"]
+debug = vars(args)["debug"]
 
 if process_type =='train' or process_type == 'read' or process_type == 'apply' :
 
@@ -42,7 +44,7 @@ if process_type =='train' or process_type == 'read' or process_type == 'apply' :
 
 def do_plot(dfs,sample_list):
     varl = ['drll01','Njets','max_eta','mjj']
-    varl = ['max_eta']
+    varl = ['ctaglj0']
     for i in varl:
         pl.plot_var(dfs,sample_list,i)
         pl.plot_var(dfs,sample_list,i,False)
@@ -61,25 +63,34 @@ def main():
         model = load_model('Outputs/training/model_nn_v0.h5')
         with open('Outputs/training/scaler.pickle', 'rb') as f:
             sc = pickle.load(f)
+        with open('Outputs/training/vl.pickle', 'rb') as f:
+            vl = pickle.load(f)
 
             #def model_create_feature():
         var_list=dl.sel_vars()    
+        cat_list=['l0_id','l1_id','dileptype'] #,'mjjctag'
         for s in sample_list:
             #print(dfs[s].columns)
             df_trans = dfs[s][var_list]
+            df_trans = hp.val_to_cat(dfs[s],cat_list)  
+            print("df_trans columns: ",df_trans.columns)
+            #df_trans = dfs[s][var_list]
             #print("before:\n",df_trans.head())
+            df_trans = pd.DataFrame(df_trans, columns=vl)
             df_trans = sc.transform(df_trans)
-            #print("after transformation:\n",df_trans[:5])
+            print("after transformation:\n",df_trans[:5])
             predictScore = model.predict(df_trans)
             dfs[s].loc[:,'score'] = dfs[s].loc[:,'Njets']
             dfs[s].loc[:,'score'] = predictScore
             #print("with score:",dfs[s].head())
 
-        for i in range(3,10):
+        for i in range(0,10):
             print(i/10)
-            pl.plot_var(dfs,sample_list,'mjj',True,i/10)
-            pl.plot_var(dfs,sample_list,'Njets',True,i/10)
-            pl.plot_var(dfs,sample_list,'score',True,i/10)
+            #pl.plot_var(dfs,sample_list,'mjj',True,i/10)
+            #pl.plot_var(dfs,sample_list,'Njets',True,i/10)
+            #pl.plot_var(dfs,sample_list,'score',True,i/10)
+            pl.plot_var(dfs,sample_list,'ctaglj0',False,i/10)
+            #pl.plot_var(dfs,sample_list,'mjj',False,i/10)
             
     elif process_type == 'read' or process_type == 'train':
 
@@ -87,27 +98,37 @@ def main():
             
             print("prepare for training:")
             print(" - transform input :")
-            cat_list=['l0_id','l1_id','dileptype','mjjctag']
+            cat_list=['l0_id','l1_id','dileptype'] #,'mjjctag'
             noncat_list = list(set(dfs['ttW'].columns)-set(cat_list))
-            for s in sample_list:
-                dfs[s]=hp.val_to_cat(dfs[s],cat_list)
-                dfs[s][noncat_list]=hp.norm_gev(dfs[s][noncat_list])
+            #for s in sample_list:
+                #dfs[s]=hp.val_to_cat(dfs[s],cat_list)
+            #    dfs[s][noncat_list]=hp.norm_gev(dfs[s][noncat_list])
 
-            var_list= list(dfs['ttW'].columns)
-            print(var_list)
+            #var_list= list(dfs['ttW'].columns)
+            #print(var_list)
+            #print(dfs['ttW'].head())
             print(" - split samples to train/test features/targets :")  
-            X_train, X_test, y_train, y_test, w_train, w_test  = hp.pred_ds(dfs)
-
+            #X_train, X_test, y_train, y_test, w_train, w_test  = hp.pred_ds(dfs)
+            X_train, X_test, y_train, y_test, cl_weight, var_list  = hp.pred_ds(dfs,cat_list,noncat_list)
+            #var_list= list(X_train.columns) 
+            print(type(X_train)," <- type X_train")
+            print(type(y_train)," <- type y_train")
+            #fl = md.create_feat(noncat_list)
+            #print(X_test[:3])
             learning_rate = 0.001
             nepochs = 500
             batch_size = 512
             validation_split = 0.2
 
+            if debug:
+                return 0
+             
             if process_type == 'train':
                 
-                model = md.create_model(learning_rate,var_list)
-                epochs, hist = md.train_model(model, X_train, y_train, w_train,
-                                           nepochs, batch_size, validation_split)
+                model = md.create_model( learning_rate,var_list)
+                epochs, hist = md.train_model(model, X_train, y_train,# w_train,
+                                              cl_weight,
+                                              nepochs, batch_size, validation_split)
 
             
                 list_of_metrics_to_plot = ['loss','val_loss']
@@ -127,9 +148,16 @@ def main():
                 model = load_model('Outputs/training/model_nn_v0.h5')
 
             if model and (process_type != 'apply'):
+                # X_test=X_test.to_numpy()
+                # y_test=y_test.to_numpy()
+                # X_train=X_train.to_numpy()
+                # y_train=y_train.to_numpy()
+
                 testPredict = model.predict(X_test)
                 xt_p = {}
+                print(X_test,y_test)
                 x_sig,x_bkg =hp.sig_bkg_ds_separate(X_test,y_test)
+                print("predict xsig")
                 xt_p['ttW'] = model.predict(x_sig)
                 xt_p['ttbar'] = model.predict(x_bkg)
                 x_p = {}
