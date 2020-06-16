@@ -9,7 +9,8 @@ binning = {"dr": [np.linspace(-2, 6, 24),1],
            "mjj": [np.linspace(0, 150, 150),scale_to_GeV],
            "pt": [np.linspace(0, 250, 250),scale_to_GeV],
            "HT": [np.linspace(0, 350, 350),scale_to_GeV],
-           "score": [np.linspace(0, 1, 20),1]
+           "score": [np.linspace(0, 1, 20),1],
+           "ctaglj": [np.linspace(-10, 10, 40),1]
           }
 
 
@@ -55,6 +56,7 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0):
         stack_var_leg.append(samples[i]['group']+" "+yield_val)
         stack_var_col.append(samples[i]['color'])
         #print("append leg, col")
+
     if do_stack:
         #print("do stack, stack_var=",stack_var)
         #print(", binning[var]=",binning[var])
@@ -93,11 +95,13 @@ def plot_var(df_bkg,lab_list,var,do_stack=True,sel_val=0):
                   label=stack_var_leg,
                   color = stack_var_col,
                   density=1,
+                  log=True,
                   stacked=False, 
                   fill=False, 
                   linewidth=2, alpha=0.8)
         plt.xlabel(var,fontsize=12)
         plt.ylabel('# Events',fontsize=12) 
         plt.legend()
-        plt.savefig('Outputs/norm/'+var+'.png', transparent=True)
+        #plt.savefig('Outputs/norm/'+var+'.png', transparent=True)
+        plt.savefig('Outputs/norm/'+var+outname+'.png') #, transparent=True)
         plt.close("norm")
