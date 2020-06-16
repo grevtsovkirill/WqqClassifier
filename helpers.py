@@ -1,6 +1,10 @@
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import StandardScaler
+
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import pickle
 
@@ -9,6 +13,7 @@ import numpy as np
 from samples import *
 
 def sig_bkg_ds_separate(X, y,key="Predict"):
+    print("in sig_bkg_ds_separate: ")
     el,cnt = np.unique(y,return_counts=True)
     print(el,cnt)
     
@@ -38,21 +43,48 @@ def val_to_cat(df, fnames):
 
 def norm_gev(df):
     df_max = df.max()
-    df_norm = (df/df_max)
+    df_mean = df.mean()
+    df_std = df.std()
+    #df_norm = (df/df_max)
+    df_norm = (df-df_mean)/df_std
     return df_norm
 
-def pred_ds(dfs,test_samp_size=0.33):    
-    X = np.concatenate((dfs['ttW'],dfs['ttbar']))
-    sc = StandardScaler(copy=False)
+def pred_ds(dfs,cat_list,noncat_list,test_samp_size=0.33):    
+    dfs['ttW']['target']=np.ones(dfs['ttW'].shape[0])
+    dfs['ttbar']['target']=np.zeros(dfs['ttbar'].shape[0])
+
+    data = pd.concat([dfs['ttW'],dfs['ttbar']], ignore_index=True, sort=False)
+    data = val_to_cat(data,cat_list) 
+    y_tot = data.pop('target')
+    #print("with target",data.head())
+    #print("with target",data.tail())
+    
+    #X = np.concatenate((dfs['ttW'],dfs['ttbar']))
+    #sc = StandardScaler(copy=False)
     #X = sc.fit_transform(X)
-    with open('Outputs/training/scaler.pickle', 'wb') as f:
-        pickle.dump(sc, f)
-    y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables
+    #with open('Outputs/training/scaler.pickle', 'wb') as f:
+     #   pickle.dump(sc, f)
+    #y = np.concatenate((np.ones(dfs['ttW'].shape[0]),np.zeros(dfs['ttbar'].shape[0]))) # class lables
     class_weight = len(dfs['ttW'])/len(dfs['ttbar'])
     print("class_weight ", class_weight)
-    w = np.concatenate(( [1]*(dfs['ttW'].shape[0]),[class_weight]*(dfs['ttbar'].shape[0]))) # class lables                                                                       
-    X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X, y, w, test_size = test_samp_size, random_state=42)
-    return X_train, X_test, y_train, y_test, w_train, w_test
+    #w = np.concatenate(( [1]*(dfs['ttW'].shape[0]),[class_weight]*(dfs['ttbar'].shape[0]))) # class lables                                                                       
+    #X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X, y, w, test_size = test_samp_size)
+    X_train, X_test, y_train, y_test = train_test_split(data, y_tot, test_size = test_samp_size)
+    #sc = StandardScaler(copy=False)
+    ct = ColumnTransformer([('sc', StandardScaler(), noncat_list)], remainder='passthrough')
+    #ct = ColumnTransformer([('sc', MinMaxScaler(), noncat_list)], remainder='passthrough')
+    print(X_train.head())
+    varlist = list(X_train.columns)  
+    with open('Outputs/training/vl.pickle', 'wb') as f:
+        pickle.dump(varlist, f)
+    X_train = ct.fit_transform(X_train)
+    with open('Outputs/training/scaler.pickle', 'wb') as f:
+        pickle.dump(ct, f)
+    print("after transform",X_train[0])
+    X_test = ct.transform(X_test)
+
+    #return X_train, X_test, y_train.to_numpy(), y_test.to_numpy(), class_weight  #, w_train, w_test
+    return X_train, X_test, y_train.to_numpy(), y_test.to_numpy(), class_weight, varlist  #, w_train, w_test
 
 
 
